@@ -1,6 +1,10 @@
 import pytest
-
-from app.features import build_features, normalize_composition, row_to_features, sum_warning
+from app.features import (
+    build_features,
+    normalize_composition,
+    row_to_features,
+    sum_warning,
+)
 
 
 def test_normalize_to_100():

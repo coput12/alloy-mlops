@@ -1,10 +1,9 @@
 """Ежедневный отчёт: запускается K8s CronJob или системным crontab."""
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import psycopg2
-
 from app.config import Config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -29,7 +28,7 @@ def main():
     total = cur.fetchone()[0]
     conn.close()
 
-    print(f"=== ЕЖЕДНЕВНЫЙ ОТЧЁТ {datetime.now().isoformat()} ===")
+    print(f"=== ЕЖЕДНЕВНЫЙ ОТЧЁТ {datetime.now(timezone.utc).isoformat()} ===")
     print(f"Всего предсказаний в PostgreSQL: {total}")
     print(f"Последний день записи: {last_date}")
     print("По версиям модели:")

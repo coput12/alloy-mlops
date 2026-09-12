@@ -1,7 +1,5 @@
-import hashlib
 import os
 import pickle
-from typing import List, Optional
 
 from .config import Config
 
@@ -9,7 +7,7 @@ from .config import Config
 class ModelService:
     """Ленивая загрузка pickle-модели и предсказание."""
 
-    def __init__(self, path: Optional[str] = None, version: Optional[str] = None):
+    def __init__(self, path: str | None = None, version: str | None = None):
         self.path = path or Config.MODEL_PATH
         self.version = version or Config.MODEL_VERSION
         self._model = None
@@ -26,7 +24,7 @@ class ModelService:
             self._model = pickle.load(f)
         self.version = Config.MODEL_VERSION if not self.version or self.version == "rf-v1" else self.version
 
-    def predict(self, features: List[float]) -> float:
+    def predict(self, features: list[float]) -> float:
         if not self.ready:
             raise RuntimeError("Модель не загружена")
         value = float(self._model.predict([features])[0])
@@ -34,7 +32,7 @@ class ModelService:
             value = 0.0
         return value
 
-    def predict_batch(self, rows: List[List[float]]) -> List[float]:
+    def predict_batch(self, rows: list[list[float]]) -> list[float]:
         if not self.ready:
             raise RuntimeError("Модель не загружена")
         values = [max(float(x), 0.0) for x in self._model.predict(rows)]

@@ -1,18 +1,36 @@
 import json
+import logging
 import uuid
-from typing import List
 
 import pika
 import redis
+from redis.exceptions import RedisError
 
 from .config import Config
+
+log = logging.getLogger(__name__)
 
 
 def _redis():
     return redis.from_url(Config.REDIS_URL, decode_responses=True)
 
 
-def publish_batch(rows: List[dict], t_test_c: float, is_tensile: int) -> str:
+def _redis_set(key: str, value: str, ttl: int) -> None:
+    try:
+        _redis().set(key, value, ex=ttl)
+    except RedisError as e:
+        log.warning("Redis недоступен, пишем мимо кэша: %s", e)
+
+
+def _redis_get(key: str):
+    try:
+        return _redis().get(key)
+    except RedisError as e:
+        log.warning("Redis недоступен, читаем мимо кэша: %s", e)
+        return None
+
+
+def publish_batch(rows: list[dict], t_test_c: float, is_tensile: int) -> str:
     """Кладёт задачу в RabbitMQ и записывает статус в Redis."""
     task_id = uuid.uuid4().hex
     body = {
@@ -35,25 +53,25 @@ def publish_batch(rows: List[dict], t_test_c: float, is_tensile: int) -> str:
     finally:
         conn.close()
 
-    _redis().set(f"task:{task_id}", json.dumps({"status": "queued"}), ex=Config.REDIS_TASK_TTL)
+    _redis_set(f"task:{task_id}", json.dumps({"status": "queued"}), Config.REDIS_TASK_TTL)
     return task_id
 
 
 def get_task(task_id: str):
-    raw = _redis().get(f"task:{task_id}")
+    raw = _redis_get(f"task:{task_id}")
     if not raw:
         return None
     return json.loads(raw)
 
 
 def set_task(task_id: str, value: dict) -> None:
-    _redis().set(f"task:{task_id}", json.dumps(value, default=str), ex=Config.REDIS_TASK_TTL)
+    _redis_set(f"task:{task_id}", json.dumps(value, default=str), Config.REDIS_TASK_TTL)
 
 
 def cache_get(key: str):
-    raw = _redis().get(f"cache:{key}")
+    raw = _redis_get(f"cache:{key}")
     return json.loads(raw) if raw else None
 
 
 def cache_set(key: str, value: dict) -> None:
-    _redis().set(f"cache:{key}", json.dumps(value), ex=Config.REDIS_CACHE_TTL)
+    _redis_set(f"cache:{key}", json.dumps(value), Config.REDIS_CACHE_TTL)

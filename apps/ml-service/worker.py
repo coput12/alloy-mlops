@@ -9,11 +9,10 @@ import time
 from datetime import datetime, timezone
 
 import pika
-
 from app.config import Config
 from app.db import ensure_postgres, insert_predictions
 from app.features import COMPONENTS, row_to_features
-from app.metrics import LATENCY, PREDICTIONS, PREDICT_VALUE
+from app.metrics import LATENCY, PREDICT_VALUE, PREDICTIONS
 from app.model import ModelService
 from app.tasks import set_task
 from confluent_kafka import Producer
@@ -83,8 +82,8 @@ def main():
             log.exception("Обработка задачи упала")
             try:
                 set_task(json.loads(body)["task_id"], {"status": "failed"})
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001
+                log.warning("Не удалось сохранить статус failed: %s", e)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     params = pika.URLParameters(Config.RABBITMQ_URL)

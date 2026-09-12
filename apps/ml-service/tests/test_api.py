@@ -1,6 +1,9 @@
-import pytest
+from pathlib import Path
 
+import pytest
 from app import create_app
+
+DATA_CSV = Path(__file__).resolve().parents[3] / "data" / "alloy_data.csv"
 
 
 @pytest.fixture()
@@ -54,7 +57,7 @@ def test_sample_alloys_predict(client, index):
     """Прогон по реальным составам из датасета (первые 10 строк)."""
     import pandas as pd
 
-    df = pd.read_csv("data/alloy_data.csv", nrows=10)
+    df = pd.read_csv(DATA_CSV, nrows=10)
     row = df.iloc[index]
     resp = client.post("/predict", json={
         "fe": float(row["Fe"]),
@@ -72,9 +75,10 @@ def test_sample_alloys_predict(client, index):
 
 def test_batch_accepted(client, monkeypatch):
     """Без живой очереди проверяем только валидацию и 202."""
-    import app.api as api_module
+    import sys
 
-    monkeypatch.setattr(api_module.tasks, "publish_batch", lambda rows, t, i: "test-task-id")
+    api_module = sys.modules["app.api"]
+    monkeypatch.setattr(api_module, "publish_batch", lambda rows, t, i: "test-task-id")
     resp = client.post("/predict-batch", json={
         "rows": [{"fe": 20, "co": 20, "ni": 20, "al": 20, "ti": 20}],
     })

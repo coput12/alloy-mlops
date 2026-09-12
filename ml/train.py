@@ -14,11 +14,10 @@ from dataclasses import asdict, dataclass
 
 warnings.filterwarnings("ignore")
 
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-from sklearn.ensemble import RandomForestRegressor  # noqa: E402
-from sklearn.metrics import mean_absolute_error, r2_score  # noqa: E402
-from sklearn.model_selection import KFold, cross_val_score  # noqa: E402
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import KFold, cross_val_score
 
 FEATURES = ["Fe", "Co", "Ni", "Al", "Ti", "T_test_C", "IsTensile"]
 TARGET = "UTS_MPa"

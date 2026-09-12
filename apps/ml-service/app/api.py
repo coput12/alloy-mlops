@@ -49,7 +49,7 @@ def predict():
             features = [float(x) for x in body]
             warning = None
         else:
-            row = {k: body.get(k, body.get(k.upper())) for k in COMPONENTS}
+            row = {k: body.get(k, body.get(k.lower())) for k in COMPONENTS}
             missing = [k for k in COMPONENTS if row.get(k) is None]
             if missing:
                 return jsonify({"error": f"отсутствуют компоненты: {missing}"}), 422

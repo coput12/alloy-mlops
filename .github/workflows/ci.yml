@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install ruff
+      - run: pip install -r apps/ml-service/requirements-dev.txt
       - run: ruff check apps/ml-service ml
 
   test:
@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install pytest pandas numpy scikit-learn
+      - run: pip install -r apps/ml-service/requirements.txt -r apps/ml-service/requirements-dev.txt
       - name: Запуск тестов
         working-directory: apps/ml-service
         run: pytest -q

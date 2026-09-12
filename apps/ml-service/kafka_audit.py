@@ -2,10 +2,9 @@
 import json
 import logging
 
-from confluent_kafka import Consumer
-
 from app.config import Config
 from app.db import audit_insert, ensure_mysql
+from confluent_kafka import Consumer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("kafka-audit")

@@ -1,4 +1,10 @@
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
 
 REQUESTS = Counter("ml_http_requests_total", "HTTP requests", ["method", "path", "status"])
 PREDICTIONS = Counter("ml_predictions_total", "Predictions made", ["kind"])

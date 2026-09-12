@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from app.model import ModelService
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/model_rf.pkl")
