@@ -1,0 +1,14 @@
+# Многоступенчатая сборка: этап CI собирает приложение, этап DevTools собирает служебные утилиты.
+# Основной Dockerfile проекта — ./Dockerfile (одна ступень, минимализм).
+# Тут только Dockerignore-исключения.
+
+.git
+.venv
+ВКР
+**/__pycache__
+**/*.pyc
+*.png
+*.jpg
+*.exe
+deploy/terraform
+docs

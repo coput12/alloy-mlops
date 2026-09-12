@@ -1,0 +1,244 @@
+name: alloy-mlops
+
+# ============================================================
+# Локальный стек для разработки / демо на одной машине (Linux).
+#   docker compose -f deploy/docker-compose.yml up --build
+# Дополнительные профили:
+#   --profile zabbix   (Zabbix server + web + agent)
+#   --profile elk      (Elasticsearch + Kibana + Filebeat)
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: alloy
+      POSTGRES_PASSWORD: alloy
+      POSTGRES_DB: alloy
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alloy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  mysql:
+    image: mysql:8.4
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: alloy
+      MYSQL_PASSWORD: alloy
+      MYSQL_DATABASE: alloy
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ualloy", "-palloy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:7-alpine
+    # password выключен для демо; в проде ставьте requirepass
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "9092:9092"
+
+  # ---------- Приложение ----------
+  ml-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["gunicorn", "-w", "2", "-b", "0.0.0.0:8000", "--timeout", "120", "app:create_app()"]
+    environment:
+      MODEL_PATH: /app/models/model_rf.pkl
+      MODEL_VERSION: rf-v1
+    depends_on:
+      postgres: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      kafka: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u;u.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "8000:8000"
+
+  ml-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["python", "apps/ml-service/worker.py"]
+    environment:
+      MODEL_PATH: /app/models/model_rf.pkl
+    depends_on:
+      ml-service: { condition: service_healthy }
+    restart: unless-stopped
+
+  kafka-audit:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["python", "apps/ml-service/kafka_audit.py"]
+    depends_on:
+      ml-service: { condition: service_healthy }
+    restart: unless-stopped
+
+  # ---------- Мониторинг ----------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules.yml:/etc/prometheus/rules.yml
+    depends_on:
+      - ml-service
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/alloy-overview.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  # ---------- Infra (профили) ----------
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:7.0-alpine-5.0-latest
+    profiles: ["zabbix"]
+    environment:
+      DB_SERVER_HOST: mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: alloy
+      MYSQL_PASSWORD: alloy
+    depends_on:
+      mysql: { condition: service_healthy }
+    ports:
+      - "10051:10051"
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-mysql:7.0-alpine-5.0-latest
+    profiles: ["zabbix"]
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      DB_SERVER_HOST: mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: alloy
+      MYSQL_PASSWORD: alloy
+    depends_on:
+      - zabbix-server
+    ports:
+      - "8080:8080"
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:7.0-alpine-latest
+    profiles: ["zabbix"]
+    volumes:
+      - ./zabbix/zabbix_agentd.conf:/etc/zabbix/zabbix_agentd.conf:ro
+    depends_on:
+      - zabbix-server
+    ports:
+      - "10050:10050"
+    restart: unless-stopped
+
+  elk-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.1
+    profiles: ["elk"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  elk-kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.1
+    profiles: ["elk"]
+    environment:
+      ELASTICSEARCH_HOSTS: http://elk-elasticsearch:9200
+    depends_on:
+      - elk-elasticsearch
+    ports:
+      - "5601:5601"
+
+  elk-filebeat:
+    image: docker.elastic.co/beats/filebeat:8.14.1
+    profiles: ["elk"]
+    user: root
+    volumes:
+      - ./elk/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - elk-elasticsearch
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  mysqldata:
+  esdata:

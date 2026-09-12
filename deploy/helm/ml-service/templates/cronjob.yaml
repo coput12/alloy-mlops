@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-daily-report
+  namespace: {{ .Values.namespace }}
+spec:
+  schedule: {{ .Values.cronjob.dailyReportSchedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: daily-report
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python", "apps/ml-service/daily_report.py"]
+              envFrom:
+                - configMapRef:
+                    name: {{ .Release.Name }}-config
+                - secretRef:
+                    name: {{ .Release.Name }}-secret
+              resources:
+                requests: { cpu: 50m, memory: 128Mi }
+                limits:   { cpu: 200m, memory: 256Mi }

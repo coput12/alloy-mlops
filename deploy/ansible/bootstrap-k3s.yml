@@ -1,0 +1,85 @@
+---
+# Bootstrap однонодового k3s + helm + deploy проекта на виртуалку Ubuntu.
+#
+#   ansible-playbook -i inventory.ini bootstrap-k3s.yml --key-file ~/.ssh/id_ed25519
+- name: Bootstrap k3s node
+  hosts: k3s
+  become: true
+  vars:
+    k3s_version: "v1.30.2+k3s2"
+
+  tasks:
+    - name: Базовая установка пакетов
+      ansible.builtin.apt:
+        name:
+          - curl
+          - python3
+          - python3-pip
+          - git
+          - apt-transport-https
+          - ca-certificates
+        update_cache: true
+
+    # ---------- k3s ----------
+    - name: Скачиваем installer k3s
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /tmp/k3s-install.sh
+        mode: "0755"
+
+    - name: Устанавливаем k3s
+      ansible.builtin.command: /tmp/k3s-install.sh
+      args:
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+        INSTALL_K3S_EXEC: "--write-kubeconfig-mode 644"
+      register: k3s_install
+
+    - name: Готовим kubeconfig для текущего пользователя
+      ansible.builtin.file:
+        path: "{{ ansible_user_dir }}/.kube"
+        state: directory
+        mode: "0755"
+      when: k3s_install.changed
+
+    - name: Копируем kubeconfig
+      ansible.builtin.copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ ansible_user_dir }}/.kube/config"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        mode: "0600"
+
+    # ---------- Helm ----------
+    - name: Скачиваем Helm
+      ansible.builtin.get_url:
+        url: https://get.helm.sh/helm-v3.15.2-linux-amd64.tar.gz
+        dest: /tmp/helm.tar.gz
+
+    - name: Распаковываем Helm
+      ansible.builtin.unarchive:
+        src: /tmp/helm.tar.gz
+        dest: /tmp
+        remote_src: true
+
+    - name: Кладём helm в PATH
+      ansible.builtin.copy:
+        src: /tmp/linux-amd64/helm
+        dest: /usr/local/bin/helm
+        mode: "0755"
+        remote_src: true
+
+    # ---------- Клонирование проекта ----------
+    - name: Клонируем репозиторий (замените URL на свой)
+      ansible.builtin.git:
+        repo: git@github.com:coput12/alloy-mlops.git
+        dest: /opt/alloy-mlops
+        version: main
+        accept_hostkey: true
+      become: false
+
+    - name: Деплоим через Helm
+      ansible.builtin.command:
+        cmd: ./scripts/deploy-k3s.sh
+        chdir: /opt/alloy-mlops

@@ -1,0 +1,47 @@
+# Упрощённый набор для однонодового k3s на виртуалке
+namespace: alloy
+
+image:
+  repository: ghcr.io/coput12/alloy-mlops
+  tag: latest
+  pullPolicy: Always
+
+model:
+  version: rf-v1
+
+api:
+  replicas: 1
+  port: 8000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 300m, memory: 512Mi }
+
+worker:
+  replicas: 1
+
+kafkaAudit:
+  replicas: 1
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  cpuTarget: 60
+
+serviceMonitor:
+  enabled: false
+
+cronjob:
+  dailyReportSchedule: "15 2 * * *"
+
+infra:
+  rabbitmqUrl: amqp://guest:guest@rabbitmq-internal:5672/
+  kafkaBootstrap: kafka-internal:9092
+  redisUrl: redis://redis-internal:6379/0
+  postgresDsn: postgresql://alloy:alloy@postgres-internal:5432/alloy
+  mysqlHost: mysql-internal
+  mysqlPort: 3306
+
+secrets:
+  mysqlUser: alloy
+  mysqlPassword: alloy

@@ -1,0 +1,31 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Deploy to k3s (helm)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Деплой на виртуалку через SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            sudo apt-get -qq update
+            if [ ! -d /opt/alloy-mlops ]; then
+              sudo git clone https://github.com/${{ github.repository_owner }}/alloy-mlops.git /opt/alloy-mlops
+            fi
+            cd /opt/alloy-mlops
+            sudo git pull
+            sudo bash scripts/deploy-k3s.sh

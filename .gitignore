@@ -1,0 +1,34 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ---------- Модель и артефакты ----------
+# модель моделируется в репозитории (нужна для сборки образа),
+# но переобученные версии CI сюда НЕ коммитим
+ml/artifacts/*.json
+ml/artifacts/*.pkl
+*.log
+
+# ---------- IDE / ОС ----------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---------- Terraform / Ansible ----------
+deploy/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+deploy/terraform/*.tfvars
+*.retry
+
+# ---------- Env ----------
+.env
+*.env
+!*.example

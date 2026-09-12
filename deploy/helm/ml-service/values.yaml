@@ -1,0 +1,55 @@
+# values.yaml — дефолты. Для k3s-демо смотри values-k3s.yaml
+namespace: alloy
+
+image:
+  repository: ghcr.io/coput12/alloy-mlops
+  tag: latest
+  pullPolicy: IfNotPresent
+
+model:
+  path: /app/models/model_rf.pkl
+  version: rf-v1
+
+api:
+  replicas: 2
+  port: 8000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+kafkaAudit:
+  replicas: 1
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  cpuTarget: 70
+
+serviceMonitor:
+  enabled: false
+
+cronjob:
+  dailyReportSchedule: "15 2 * * *"   # ежедневно в 02:15 по UTC
+
+infra:
+  # Адреса инфраструктурных сервисов.
+  # Для хаотичного деплоя: инфраструктура (Kafka/PG/Redis) чаще живёт
+  # вне кластера как managed-сервисы, внутри кластера — см. README "Установка"
+  rabbitmqUrl: amqp://guest:guest@rabbitmq-internal:5672/
+  kafkaBootstrap: kafka-internal:9092
+  redisUrl: redis://redis-internal:6379/0
+  postgresDsn: postgresql://alloy:alloy@postgres-internal:5432/alloy
+  mysqlHost: mysql-internal
+  mysqlPort: 3306
+
+secrets:
+  # В проде храните в K8s Secret / External Secrets! Здесь — демо-значения.
+  mysqlUser: alloy
+  mysqlPassword: alloy

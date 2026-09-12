@@ -1,0 +1,99 @@
+{
+  "uid": "alloy-overview",
+  "title": "Alloy MLOps — обзор сервиса",
+  "tags": ["mlops", "alloy"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "graphTooltip": 1,
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Скорость предсказаний (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "min": 0 },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ml_predictions_total[1m])) by (kind)",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Латентность предсказаний P95 (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ml_predict_latency_seconds_bucket[5m])) by (le, kind))",
+          "legendFormat": "P95 {{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP 5xx (rate)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ml_http_requests_total{status=~\"5..\"}[1m]))",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Распределение предсказаний UTS (МПа)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "MPa" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ml_prediction_value_bucket[5m])) by (le) * 0 ",
+          "legendFormat": "(stub)"
+        },
+        {
+          "expr": "sum by (kind) (rate(ml_prediction_value_count[5m]))",
+          "legendFormat": "{{kind}}"
+        }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

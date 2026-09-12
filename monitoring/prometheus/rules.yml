@@ -1,0 +1,26 @@
+groups:
+  - name: ml-service-alerts
+    rules:
+      - alert: MlServiceDown
+        expr: up{job="ml-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Сервис предсказаний недоступен"
+
+      - alert: HighPredictionLatency
+        expr: histogram_quantile(0.95, sum(rate(ml_predict_latency_seconds_bucket[5m])) by (le, kind)) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 латентность предсказаний ({{ $labels.kind }}) > 1s"
+
+      - alert: HighErrorRate
+        expr: sum(rate(ml_http_requests_total{status=~"5.."}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Более 10% HTTP-запросов возвращают 5xx"

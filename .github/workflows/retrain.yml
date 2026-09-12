@@ -1,0 +1,39 @@
+name: ML retrain
+
+on:
+  schedule:
+    # Ночной переобучение на актуальном датасете (00:15 UTC)
+    - cron: "15 0 * * *"
+  workflow_dispatch: {}
+  push:
+    paths:
+      - "data/**"
+
+jobs:
+  train:
+    name: Train RandomForest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Установка зависимостей
+        run: pip install pandas numpy scikit-learn
+
+      - name: Обучение модели
+        run: python ml/train.py --data data/alloy_data.csv --out models/model_rf.pkl
+
+      - name: Публикация метрик в job-логе
+        run: cat ml/artifacts/metrics.json
+
+      - name: Возврат модели и метрик в репозиторий
+        run: |
+          git config user.name "CI bot"
+          git config user.email "ci@example.com"
+          git add models/model_rf.pkl ml/artifacts/metrics.json
+          git diff --cached --quiet || git commit -m "chore: retrain model [skip ci]"
+          git push
