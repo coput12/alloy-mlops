@@ -85,7 +85,6 @@
         repo: https://github.com/coput12/alloy-mlops.git
         dest: /opt/alloy-mlops
         version: main
-      become: false
 
     - name: Деплоим через Helm
       ansible.builtin.command:
