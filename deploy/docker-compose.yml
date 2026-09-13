@@ -35,6 +35,7 @@ services:
       MYSQL_DATABASE: alloy
     volumes:
       - mysqldata:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ualloy", "-palloy"]
       interval: 5s
@@ -167,7 +168,7 @@ services:
 
   # ---------- Infra (профили) ----------
   zabbix-server:
-    image: zabbix/zabbix-server-mysql:7.0-alpine-5.0-latest
+    image: zabbix/zabbix-server-mysql:alpine-7.0-latest
     profiles: ["zabbix"]
     environment:
       DB_SERVER_HOST: mysql
@@ -180,7 +181,7 @@ services:
       - "10051:10051"
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-mysql:7.0-alpine-5.0-latest
+    image: zabbix/zabbix-web-nginx-mysql:alpine-7.0-latest
     profiles: ["zabbix"]
     environment:
       ZBX_SERVER_HOST: zabbix-server
@@ -196,8 +197,8 @@ services:
   zabbix-agent:
     image: zabbix/zabbix-agent:7.0-alpine-latest
     profiles: ["zabbix"]
-    volumes:
-      - ./zabbix/zabbix_agentd.conf:/etc/zabbix/zabbix_agentd.conf:ro
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
     depends_on:
       - zabbix-server
     ports:
