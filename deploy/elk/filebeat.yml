@@ -10,6 +10,9 @@ output.elasticsearch:
   hosts: ["http://elk-elasticsearch:9200"]
   index: "docker-logs-%{+yyyy.MM.dd}"
 
+setup.template.name: "docker-logs"
+setup.template.pattern: "docker-logs-*"
+
 setup.kibana:
   host: "http://elk-kibana:5601"
 
