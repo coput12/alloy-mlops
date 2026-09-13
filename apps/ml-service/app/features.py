@@ -3,16 +3,23 @@ COMPONENTS = ["Fe", "Co", "Ni", "Al", "Ti"]
 SUM_TOLERANCE = 0.5
 
 
+def _component_value(row: dict[str, float], k: str) -> float:
+    return float(row.get(k, row.get(k.lower(), 0.0)))
+
+
 def normalize_composition(row: dict[str, float]) -> dict[str, float]:
-    """Приводит концентрации к сумме 100% (признаки модели строились так)."""
-    total = sum(float(row.get(k, 0.0)) for k in COMPONENTS)
+    """Приводит концентрации к сумме 100% (признаки модели строились так).
+
+    Регистронезависимый разбор: клиенты присылают "fe", модель обучена на "Fe".
+    """
+    total = sum(_component_value(row, k) for k in COMPONENTS)
     if total <= 0:
         raise ValueError("Сумма концентраций должна быть больше нуля")
-    return {k: float(row.get(k, 0.0)) / total * 100.0 for k in COMPONENTS}
+    return {k: _component_value(row, k) / total * 100.0 for k in COMPONENTS}
 
 
 def sum_warning(row: dict[str, float]) -> str | None:
-    total = sum(float(row.get(k, 0.0)) for k in COMPONENTS)
+    total = sum(_component_value(row, k) for k in COMPONENTS)
     if abs(total - 100.0) > SUM_TOLERANCE:
         return f"Сумма компонентов = {total:.1f}%, будет нормализована до 100%"
     return None
