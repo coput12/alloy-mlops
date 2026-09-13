@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 import pika
 from app.config import Config
 from app.db import ensure_postgres, insert_predictions
-from app.features import COMPONENTS, row_to_features
+from app.features import COMPONENTS, _component_value, row_to_features
 from app.metrics import LATENCY, PREDICT_VALUE, PREDICTIONS
 from app.model import ModelService
 from app.tasks import set_task
@@ -56,7 +56,7 @@ def main():
                 LATENCY.labels(kind="batch").observe(time.perf_counter() - start)
                 PREDICT_VALUE.labels(kind="batch").observe(value)
                 results.append({
-                    **{k: float(row.get(k, 0.0) or 0.0) for k in COMPONENTS},
+                    **{k: round(_component_value(row, k), 1) for k in COMPONENTS},
                     "prediction": round(value, 1),
                 })
 
