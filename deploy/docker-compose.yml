@@ -173,8 +173,8 @@ services:
     environment:
       DB_SERVER_HOST: mysql
       MYSQL_DATABASE: zabbix
-      MYSQL_USER: alloy
-      MYSQL_PASSWORD: alloy
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
     depends_on:
       mysql: { condition: service_healthy }
     ports:
