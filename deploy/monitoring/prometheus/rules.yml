@@ -1,0 +1,26 @@
+groups:
+  - name: alloy-mlops
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+
+      - alert: HighPredictLatency
+        expr: histogram_quantile(0.95, rate(ml_predict_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 predict latency > 0.5s"
+
+      - alert: NoRecentPredictions
+        expr: sum(increase(ml_predictions_total[10m])) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No predictions in the last 10 minutes"
