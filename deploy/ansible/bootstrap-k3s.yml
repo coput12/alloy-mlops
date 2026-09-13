@@ -38,7 +38,7 @@
 
     - name: Готовим kubeconfig для текущего пользователя
       ansible.builtin.file:
-        path: "{{ ansible_user_dir }}/.kube"
+        path: "{{ ansible_facts.env.HOME }}/.kube"
         state: directory
         mode: "0755"
       when: k3s_install.changed
@@ -46,9 +46,9 @@
     - name: Копируем kubeconfig
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_user_dir }}/.kube/config"
+        dest: "{{ ansible_facts.env.HOME }}/.kube/config"
         remote_src: true
-        owner: "{{ ansible_user }}"
+        owner: "{{ ansible_facts.user_id }}"
         mode: "0600"
 
     # ---------- Helm ----------
