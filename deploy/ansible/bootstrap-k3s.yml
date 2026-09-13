@@ -52,16 +52,24 @@
         mode: "0600"
 
     # ---------- Helm ----------
-    - name: Скачиваем Helm
+    - name: Проверяем, установлен ли Helm
+      ansible.builtin.shell: command -v helm
+      register: helm_check
+      changed_when: false
+      failed_when: false
+
+    - name: Скачиваем Helm (если ещё не установлен)
       ansible.builtin.get_url:
         url: https://get.helm.sh/helm-v3.15.2-linux-amd64.tar.gz
         dest: /tmp/helm.tar.gz
+      when: helm_check.rc != 0
 
     - name: Распаковываем Helm
       ansible.builtin.unarchive:
         src: /tmp/helm.tar.gz
         dest: /tmp
         remote_src: true
+      when: helm_check.rc != 0
 
     - name: Кладём helm в PATH
       ansible.builtin.copy:
@@ -69,14 +77,14 @@
         dest: /usr/local/bin/helm
         mode: "0755"
         remote_src: true
+      when: helm_check.rc != 0
 
     # ---------- Клонирование проекта ----------
-    - name: Клонируем репозиторий (замените URL на свой)
+    - name: Клонируем репозиторий
       ansible.builtin.git:
-        repo: git@github.com:coput12/alloy-mlops.git
+        repo: https://github.com/coput12/alloy-mlops.git
         dest: /opt/alloy-mlops
         version: main
-        accept_hostkey: true
       become: false
 
     - name: Деплоим через Helm

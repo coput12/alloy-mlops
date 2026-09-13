@@ -12,6 +12,7 @@ venv/
 # модель моделируется в репозитории (нужна для сборки образа),
 # но переобученные версии CI сюда НЕ коммитим
 ml/artifacts/*.json
+!ml/artifacts/metrics.json
 ml/artifacts/*.pkl
 *.log
 
