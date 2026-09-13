@@ -88,5 +88,5 @@
 
     - name: Деплоим через Helm
       ansible.builtin.command:
-        cmd: ./scripts/deploy-k3s.sh
+        cmd: bash ./scripts/deploy-k3s.sh
         chdir: /opt/alloy-mlops
