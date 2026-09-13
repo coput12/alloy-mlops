@@ -13,6 +13,15 @@ VALUES="${VALUES:-./deploy/helm/ml-service/values-k3s.yaml}"
 # k3s хранит kubeconfig по умолчанию здесь; работает и от root (sudo в CD), и от user.
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 
+if [ ! -r "$KUBECONFIG" ]; then
+  if [ "$(id -u)" = 0 ] || sudo -n true 2>/dev/null; then
+    sudo chmod 644 "$KUBECONFIG"
+  else
+    echo ">> kubeconfig $KUBECONFIG недоступен для чтения. Выполни: sudo chmod 644 $KUBECONFIG" >&2
+    exit 1
+  fi
+fi
+
 VMIP="${VMIP:-$(hostname -I | awk '{print $1}')}"
 echo ">> Инфраструктура (docker-compose на хосте) адресуется через ${VMIP}"
 
